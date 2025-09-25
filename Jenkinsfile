@@ -2,9 +2,9 @@ pipeline {
     agent any
 
     stages {
-        stage('Clonar repositorio') {
+        stage('Clonar repositorio UnU') {
             steps {
-                   git branch: 'develop', url: 'url https://github.com/KiritoKazut0/ci-cd.git'
+                git branch: 'develop', url: 'https://github.com/KiritoKazut0/ci-cd.git'
             }
         }
 
