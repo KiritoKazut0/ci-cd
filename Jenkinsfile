@@ -3,7 +3,7 @@ pipeline {
 
     environment {
         REMOTE_PATH = "/home/ubuntu/ci-cd"
-        DOCKER_IMAGE = "kiritokazut0/ci-cd:latest"
+        DOCKER_IMAGE = "kiritokazut0/express-app:latest"
     }
 
     parameters {
@@ -18,7 +18,7 @@ pipeline {
             }
         }
 
-        stage('Build y push Docker') {
+        stage('Build y push Docker desde EC2') {
             steps {
                 sh """
                     echo "Construyendo imagen Docker..."
@@ -55,6 +55,7 @@ pipeline {
                             sudo apt-get install -y docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin
                             sudo systemctl start docker
                             sudo systemctl enable docker
+
                         else
                             echo "Docker ya está instalado"
                         fi
