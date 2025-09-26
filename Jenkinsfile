@@ -18,7 +18,7 @@ pipeline {
             }
         }
 
-        stage('Build y push Docker') {
+        stage('Build y push Docker desde EC2') {
             steps {
                 withCredentials([usernamePassword(
                     credentialsId: 'docker-hub-cred', 
@@ -65,6 +65,7 @@ pipeline {
                             sudo apt-get install -y docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin
                             sudo systemctl start docker
                             sudo systemctl enable docker
+
                         else
                             echo "Docker ya está instalado"
                         fi
