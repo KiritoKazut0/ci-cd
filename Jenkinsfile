@@ -18,14 +18,24 @@ pipeline {
             }
         }
 
-        stage('Build y push Docker desde EC2') {
+        stage('Build y push Docker') {
             steps {
-                sh """
-                    echo "Construyendo imagen Docker..."
-                    docker build -t $DOCKER_IMAGE .
-                    echo "Subiendo imagen a Docker Hub..."
-                    docker push $DOCKER_IMAGE
-                """
+                withCredentials([usernamePassword(
+                    credentialsId: 'docker-hub-cred', 
+                    usernameVariable: 'DOCKER_USER', 
+                    passwordVariable: 'DOCKER_PASS'
+                )]) {
+                    sh """
+                        echo "Iniciando sesión en Docker Hub..."
+                        docker login -u $DOCKER_USER -p $DOCKER_PASS
+                        
+                        echo "Construyendo imagen Docker..."
+                        docker build -t $DOCKER_IMAGE .
+                        
+                        echo "Subiendo imagen a Docker Hub..."
+                        docker push $DOCKER_IMAGE
+                    """
+                }
             }
         }
 
@@ -55,7 +65,6 @@ pipeline {
                             sudo apt-get install -y docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin
                             sudo systemctl start docker
                             sudo systemctl enable docker
-
                         else
                             echo "Docker ya está instalado"
                         fi
@@ -94,8 +103,8 @@ pipeline {
                             docker rm ci-cd
                         fi
 
-                        docker pull kiritokazut0/ci-cd:latest
-                        docker run -d --name ci-cd -p 3000:3000 kiritokazut0/ci-cd:latest
+                        docker pull kiritokazut0/express-app:latest
+                        docker run -d --name ci-cd -p 3000:3000 kiritokazut0/express-app:latest
                         ENDSSH
                     """
                 }
