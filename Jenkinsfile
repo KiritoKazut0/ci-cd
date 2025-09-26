@@ -55,7 +55,6 @@ pipeline {
                             sudo apt-get install -y docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin
                             sudo systemctl start docker
                             sudo systemctl enable docker
-                            sudo usermod -aG docker jenkins
 
                         else
                             echo "Docker ya está instalado"
