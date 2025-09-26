@@ -20,12 +20,22 @@ pipeline {
 
         stage('Build y push Docker desde EC2') {
             steps {
-                sh """
-                    echo "Construyendo imagen Docker..."
-                    docker build -t $DOCKER_IMAGE .
-                    echo "Subiendo imagen a Docker Hub..."
-                    docker push $DOCKER_IMAGE
-                """
+                withCredentials([usernamePassword(
+                    credentialsId: 'docker-hub-cred', 
+                    usernameVariable: 'DOCKER_USER', 
+                    passwordVariable: 'DOCKER_PASS'
+                )]) {
+                    sh """
+                        echo "Iniciando sesión en Docker Hub..."
+                        docker login -u $DOCKER_USER -p $DOCKER_PASS
+                        
+                        echo "Construyendo imagen Docker..."
+                        docker build -t $DOCKER_IMAGE .
+                        
+                        echo "Subiendo imagen a Docker Hub..."
+                        docker push $DOCKER_IMAGE
+                    """
+                }
             }
         }
 
@@ -94,8 +104,8 @@ pipeline {
                             docker rm ci-cd
                         fi
 
-                        docker pull kiritokazut0/ci-cd:latest
-                        docker run -d --name ci-cd -p 3000:3000 kiritokazut0/ci-cd:latest
+                        docker pull kiritokazut0/express-app:latest
+                        docker run -d --name ci-cd -p 3000:3000 kiritokazut0/express-app:latest
                         ENDSSH
                     """
                 }
