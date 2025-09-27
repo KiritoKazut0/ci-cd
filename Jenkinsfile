@@ -18,7 +18,7 @@ pipeline {
             }
         }
 
-        stage('Build y push Docker desde EC2') {
+        stage('Build y push Docker') {
             steps {
                 withCredentials([usernamePassword(
                     credentialsId: 'docker-hub-cred', 
@@ -27,7 +27,7 @@ pipeline {
                 )]) {
                     sh """
                         echo "Iniciando sesión en Docker Hub..."
-                        docker login -u $DOCKER_USER -p $DOCKER_PASS
+                        echo "$DOCKER_PASS" | docker login -u "$DOCKER_USER" --password-stdin
                         
                         echo "Construyendo imagen Docker..."
                         docker build -t $DOCKER_IMAGE .
@@ -49,43 +49,32 @@ pipeline {
                     sh """
                         chmod 600 "$SSH_KEY_FILE"
 
-                        ssh -o StrictHostKeyChecking=no -i "$SSH_KEY_FILE" $EC2_USER@${params.EC2_HOST} 'bash -s' <<'ENDSSH'
+                        ssh -o StrictHostKeyChecking=no -i "$SSH_KEY_FILE" $EC2_USER@${params.EC2_HOST} << 'ENDSSH'
                         echo "Conexión exitosa a EC2"
 
-                        # 1️⃣ Verificar Docker
+                        # 1️⃣ Instalar Docker si no existe
                         if ! command -v docker &> /dev/null; then
-                            echo "Docker no encontrado, instalando versión oficial..."
+                            echo "Docker no encontrado, instalando..."
                             sudo apt-get update
-                            sudo apt-get install -y ca-certificates curl
-                            sudo install -m 0755 -d /etc/apt/keyrings
-                            sudo curl -fsSL https://download.docker.com/linux/ubuntu/gpg -o /etc/apt/keyrings/docker.asc
-                            sudo chmod a+r /etc/apt/keyrings/docker.asc
-                            echo "deb [arch=\$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/docker.asc] https://download.docker.com/linux/ubuntu \$(. /etc/os-release && echo \${UBUNTU_CODENAME:-\$VERSION_CODENAME}) stable" | sudo tee /etc/apt/sources.list.d/docker.list > /dev/null
-                            sudo apt-get update
-                            sudo apt-get install -y docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin
+                            sudo apt-get install -y docker.io
                             sudo systemctl start docker
                             sudo systemctl enable docker
-
-                        else
-                            echo "Docker ya está instalado"
                         fi
 
-                        # 2️⃣ Verificar Nginx
+                        # 2️⃣ Instalar Nginx si no existe
                         if ! command -v nginx &> /dev/null; then
                             echo "Nginx no encontrado, instalando..."
+                            sudo apt-get update
                             sudo apt-get install -y nginx
                             sudo systemctl start nginx
                             sudo systemctl enable nginx
-                        else
-                            echo "Nginx ya está instalado"
                         fi
 
-                        # 3️⃣ Configurar Nginx
+                        # 3️⃣ Configuración Nginx
                         sudo tee /etc/nginx/sites-available/ci-cd > /dev/null <<'EOF'
                         server {
                             listen 80;
                             server_name _;
-
                             location / {
                                 proxy_pass http://localhost:3000;
                                 proxy_set_header Host \$host;
@@ -98,12 +87,8 @@ pipeline {
                         sudo ln -sf /etc/nginx/sites-available/ci-cd /etc/nginx/sites-enabled/ci-cd
                         sudo nginx -t && sudo systemctl reload nginx
 
-                        # 4️⃣ Desplegar aplicación
-                        if [ \$(docker ps -q -f name=ci-cd) ]; then
-                            docker stop ci-cd
-                            docker rm ci-cd
-                        fi
-
+                        # 4️⃣ Reemplazar contenedor viejo
+                        docker rm -f ci-cd || true
                         docker pull kiritokazut0/express-app:latest
                         docker run -d --name ci-cd -p 3000:3000 kiritokazut0/express-app:latest
                         ENDSSH
